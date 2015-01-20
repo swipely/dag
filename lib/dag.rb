@@ -77,7 +77,8 @@ class DAG
           origin = e.origin
           result.add_edge(
             from: vertex_mapping[origin],
-            to: vertex_mapping[destination])
+            to: vertex_mapping[destination],
+            properties: e.properties)
         end
       end
     end
@@ -89,7 +90,8 @@ class DAG
           destination = e.destination
           result.add_edge(
             from: vertex_mapping[origin],
-            to: vertex_mapping[destination])
+            to: vertex_mapping[destination],
+            properties: e.properties)
         end
       end
     end

@@ -1,5 +1,6 @@
 require 'spec_helper'
-
+require 'graphviz'
+require 'pry'
 describe DAG do
 
   context 'when new' do
@@ -140,7 +141,7 @@ describe DAG do
     let(:joe) { subject.add_vertex(name: "joe") }
     let(:bob) { subject.add_vertex(name: "bob") }
     let(:jane) { subject.add_vertex(name: "jane") }
-    let!(:e1) { subject.add_edge(origin: joe, destination: bob) }
+    let!(:e1) { subject.add_edge(origin: joe, destination: bob, properties: {name: "father of"}) }
     let!(:e2) { subject.add_edge(origin: joe, destination: jane) }
     let!(:e3) { subject.add_edge(origin: bob, destination: jane) }
 
@@ -189,6 +190,56 @@ describe DAG do
         subgraph.vertices.should have(3).items
         Set.new(subgraph.vertices.map(&:my_name)).should == Set.new(["bob","jane","joe"])
         subgraph.edges.should have(2).items
+      end
+
+    end
+
+    describe '.render' do
+      it 'returns a graph' do
+        subject.render.should be_instance_of(GraphViz)
+      end
+
+      it 'the graph has the correct objects' do
+        subject.render.edge_count.should == 3
+        subject.render.node_count.should == 3
+      end
+
+      it 'the default node render is working' do
+        node= subject.render.get_node("1")
+        node[:color].output.should == "\"black\""
+        node[:label].output.should == "\"1\""
+      end
+
+      it 'can use a custome vertex block' do
+        subject.apply_vertex_config do |v|
+          {
+            shape: 'record',
+            label: "{#{v.my_name}}",
+            color: 'green',
+            fillcolor: 'blue',
+            style: 'filled',
+          }
+        end
+
+        node= subject.render.get_node("1")
+        node[:color].output.should == "\"green\""
+        node[:label].output.should == "\"{bob}\""
+
+      end
+
+      it 'can use a custome edge block' do
+        subject.apply_edge_config do |e|
+          {
+            dir: 'forward',
+            label: "{#{e.properties[:name]}}",
+            color: 'blue',
+          }
+        end
+
+        edge= subject.render.get_edge_at_index(0)
+        edge[:color].output.should == "\"blue\""
+        edge[:label].output.should == "\"{father of}\""
+
       end
 
     end

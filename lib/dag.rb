@@ -1,4 +1,5 @@
 require_relative 'dag/vertex'
+require 'graphviz'
 
 class DAG
 
@@ -16,6 +17,17 @@ class DAG
     @vertices = []
     @edges = []
     @mixin = options[:mixin]
+
+    @edge_presenter_blk = default_edge_presenter_blk
+    @vertex_presenter_blk = default_vertex_presenter_blk
+  end
+
+  def apply_vertex_config(&blk)
+    @vertex_presenter_blk = blk
+  end
+
+  def apply_edge_config(&blk)
+    @edge_presenter_blk = blk
   end
 
   def add_vertex(payload = {})
@@ -99,6 +111,52 @@ class DAG
     return result
   end
 
+  def render()
+    graph = GraphViz.new(:G, :type => :digraph)
+
+    vertex_mapping = {}
+
+    vertices.each_with_index do |v, i|
+      # Default will use vertex index as a label
+      n = graph.add_node(i.to_s, @vertex_presenter_blk.call(v))
+      vertex_mapping[v] = n
+    end
+
+    edges.each do |e|
+      graph.add_edge(
+          vertex_mapping[e.origin],
+          vertex_mapping[e.destination],
+          @edge_presenter_blk.call(e)
+        )
+    end
+
+    return graph
+  end
+
+  private
+  def default_vertex_presenter_blk
+    # Define a callable with default GraphViz Options
+    proc do |x|
+      {
+        shape: 'record',
+        #label: "{Vertex}",
+        color: 'black',
+        fillcolor: 'white',
+        style: 'filled',
+      }
+    end
+  end
+
+  def default_edge_presenter_blk
+    # Define a callable with default GraphViz Options
+    proc do |x|
+      {
+        #label: 'foo',
+        color: 'black',
+        dir: 'back'
+      }
+    end
+  end
 
 end
 

@@ -1,6 +1,7 @@
 require 'spec_helper'
 require 'graphviz'
 require 'pry'
+require 'graphviz_presenter'
 describe DAG do
 
   context 'when new' do
@@ -195,23 +196,24 @@ describe DAG do
     end
 
     describe '.render' do
+
       it 'returns a graph' do
-        subject.render.should be_instance_of(GraphViz)
+        subject.render(GraphVizPresenter).graph.should be_instance_of(GraphViz)
       end
 
       it 'the graph has the correct objects' do
-        subject.render.edge_count.should == 3
-        subject.render.node_count.should == 3
+        subject.render(GraphVizPresenter).graph.edge_count.should == 3
+        subject.render(GraphVizPresenter).graph.node_count.should == 3
       end
 
       it 'the default node render is working' do
-        node= subject.render.get_node("1")
+        node= subject.render(GraphVizPresenter).graph.get_node("1")
         node[:color].output.should == "\"black\""
         node[:label].output.should == "\"1\""
       end
 
       it 'can use a custome vertex block' do
-        subject.apply_vertex_config do |v|
+        GraphVizPresenter.vertex_presenter_blk = proc do |v|
           {
             shape: 'record',
             label: "{#{v.my_name}}",
@@ -221,14 +223,14 @@ describe DAG do
           }
         end
 
-        node= subject.render.get_node("1")
+        node= subject.render(GraphVizPresenter).graph.get_node("1")
         node[:color].output.should == "\"green\""
         node[:label].output.should == "\"{bob}\""
 
       end
 
       it 'can use a custome edge block' do
-        subject.apply_edge_config do |e|
+        GraphVizPresenter.edge_presenter_blk = proc do |e|
           {
             dir: 'forward',
             label: "{#{e.properties[:name]}}",
@@ -236,7 +238,7 @@ describe DAG do
           }
         end
 
-        edge= subject.render.get_edge_at_index(0)
+        edge= subject.render(GraphVizPresenter).graph.get_edge_at_index(0)
         edge[:color].output.should == "\"blue\""
         edge[:label].output.should == "\"{father of}\""
 

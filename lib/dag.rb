@@ -1,5 +1,4 @@
 require_relative 'dag/vertex'
-require 'graphviz'
 
 class DAG
 
@@ -17,17 +16,7 @@ class DAG
     @vertices = []
     @edges = []
     @mixin = options[:mixin]
-
-    @edge_presenter_blk = default_edge_presenter_blk
-    @vertex_presenter_blk = default_vertex_presenter_blk
-  end
-
-  def apply_vertex_config(&blk)
-    @vertex_presenter_blk = blk
-  end
-
-  def apply_edge_config(&blk)
-    @edge_presenter_blk = blk
+    @mixin_edge = options[:mixin_edge]
   end
 
   def add_vertex(payload = {})
@@ -47,7 +36,10 @@ class DAG
      destination && Vertex === destination && destination.dag == self
     raise ArgumentError.new('A DAG must not have cycles') if origin == destination
     raise ArgumentError.new('A DAG must not have cycles') if destination.has_path_to?(origin)
-    Edge.new(origin, destination, properties).tap {|e| @edges << e }
+    Edge.new(origin, destination, properties).tap {|e|
+      e.extend(@mixin_edge) if @mixin_edge
+      @edges << e
+    }
   end
 
   def subgraph(predecessors_of = [], successors_of = [])
@@ -111,51 +103,27 @@ class DAG
     return result
   end
 
-  def render()
-    graph = GraphViz.new(:G, :type => :digraph)
+  def render(presenter, args=[])
+    # Given a presenter class which implements add_vertex and add_edge
+    # present the modeled information - good for transformation to other forms
+    presentation = presenter.new(*args)
 
     vertex_mapping = {}
+    # Holds context for processing edges
 
-    vertices.each_with_index do |v, i|
-      # Default will use vertex index as a label
-      n = graph.add_node(i.to_s, @vertex_presenter_blk.call(v))
-      vertex_mapping[v] = n
+    vertices.each do |v|
+      vertex_mapping[v] = presentation.add_vertex(v)
     end
 
     edges.each do |e|
-      graph.add_edge(
+      presentation.add_edge(
           vertex_mapping[e.origin],
           vertex_mapping[e.destination],
-          @edge_presenter_blk.call(e)
+          e
         )
     end
 
-    return graph
-  end
-
-  private
-  def default_vertex_presenter_blk
-    # Define a callable with default GraphViz Options
-    proc do |x|
-      {
-        shape: 'record',
-        #label: "{Vertex}",
-        color: 'black',
-        fillcolor: 'white',
-        style: 'filled',
-      }
-    end
-  end
-
-  def default_edge_presenter_blk
-    # Define a callable with default GraphViz Options
-    proc do |x|
-      {
-        #label: 'foo',
-        color: 'black',
-        dir: 'back'
-      }
-    end
+    return presentation
   end
 
 end

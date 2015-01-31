@@ -1,4 +1,5 @@
 require_relative 'dag/vertex'
+require_relative 'dag/dag_presenter'
 
 class DAG
 
@@ -82,6 +83,32 @@ class DAG
     return result
   end
 
+  def render(presenter, args=[])
+    # Given a presenter class which implements DagPresenter transform the modeled information
+    raise ArgumentError,
+      "Unknown presenter class: #{presenter} - must inherit from DagPresenter" unless
+        presenter < DagPresenter
+
+    presentation = presenter.new(*args)
+
+    vertex_mapping = {}
+    # Holds context for processing edges
+
+    vertices.each do |v|
+      vertex_mapping[v] = presentation.add_vertex(v)
+    end
+
+    edges.each do |e|
+      presentation.add_edge(
+          vertex_mapping[e.origin],
+          vertex_mapping[e.destination],
+          e
+        )
+    end
+
+    return presentation
+  end
+
   private
 
   def is_my_vertex?(v)
@@ -89,6 +116,7 @@ class DAG
     #puts "Verts dag is self #{v.dag == self}"
     v.kind_of?(Vertex) and v.dag == self
   end
+
 
 end
 

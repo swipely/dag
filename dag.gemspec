@@ -8,6 +8,8 @@ Gem::Specification.new do |s|
   s.email       = 'kevin@rutherford-software.com'
   s.homepage    = 'http://github.com/kevinrutherford/dag'
 
+  s.add_dependency "ruby-graphviz"
+
   s.add_development_dependency 'rake', '~> 10'
   s.add_development_dependency 'rspec', '~> 3'
 

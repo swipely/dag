@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'dag/graphviz_presenter'
 
 describe DAG do
 
@@ -186,6 +187,62 @@ describe DAG do
         expect(subgraph.edges.length).to eq(2)
         expect(subgraph.edges[0].properties).to eq({name: "father of"})
         expect(subgraph.edges[1].properties).to eq({})
+      end
+
+    end
+
+    describe '.render' do
+
+      it 'returns a graph' do
+        expect(subject.render(GraphVizPresenter)).to be_kind_of(DagPresenter)
+      end
+
+      it 'the graph has the correct objects' do
+        expect(subject.render(GraphVizPresenter).graph.edge_count).to eq(3)
+        expect(subject.render(GraphVizPresenter).graph.node_count).to eq(3)
+      end
+
+      it 'the default node render is working' do
+        node= subject.render(GraphVizPresenter).graph.get_node("1")
+        expect(node[:color].output).to eq("\"black\"")
+        expect(node[:label].output).to eq("\"1\"")
+      end
+
+      it 'can use a custome vertex block' do
+        GraphVizPresenter.vertex_presenter_blk = proc do |v|
+          {
+            shape: 'record',
+            label: "{#{v.my_name}}",
+            color: 'green',
+            fillcolor: 'blue',
+            style: 'filled',
+          }
+        end
+
+        node= subject.render(GraphVizPresenter).graph.get_node("1")
+        expect(node[:color].output).to eq("\"green\"")
+        expect(node[:label].output).to eq("\"{bob}\"")
+
+      end
+
+      it 'can use a custom edge block' do
+        GraphVizPresenter.edge_presenter_blk = proc do |e|
+          {
+            dir: 'forward',
+            label: "{#{e.properties[:name]}}",
+            color: 'blue',
+          }
+        end
+
+        edge= subject.render(GraphVizPresenter).graph.get_edge_at_index(0)
+        expect(edge[:color].output).to eq("\"blue\"")
+        expect(edge[:label].output).to eq("\"{father of}\"")
+
+      end
+
+      it 'can output a figure' do
+        subject.render(GraphVizPresenter).present(:png => 'foobar.png')
+
       end
 
     end
